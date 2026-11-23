@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07131f">
+  <meta name="description" content="An interactive GCSE electrolysis simulator for molten and aqueous electrolytes.">
+  <title>GCSE Electrolysis Lab</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span>−</span><i></i><span>+</span></div>
+        <div>
+          <p class="eyebrow">Interactive chemistry · GCSE</p>
+          <h1>Electrolysis Lab</h1>
+        </div>
+      </div>
+      <div class="status" id="status" aria-live="polite"><i></i><span>Power off</span></div>
+    </header>
+
+    <section class="control-panel" aria-label="Experiment controls">
+      <div class="field mode-field">
+        <span class="field-label">Electrolyte state</span>
+        <div class="segmented" role="group" aria-label="Electrolyte state">
+          <button type="button" data-mode="molten">Molten</button>
+          <button type="button" class="active" data-mode="aqueous">Aqueous</button>
+        </div>
+      </div>
+      <label class="field electrolyte-field">
+        <span class="field-label">Electrolyte</span>
+        <span class="select-wrap"><select id="electrolyte"></select></span>
+      </label>
+      <label class="field speed-field">
+        <span class="field-label">Animation speed <output id="speed-out">1×</output></span>
+        <input id="speed" type="range" min="0.5" max="2" value="1" step="0.25">
+      </label>
+      <div class="button-row">
+        <button class="reset-button" id="reset" type="button">Reset</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="stage-card">
+        <div class="stage-head">
+          <div><span class="stage-kicker">Live model</span><strong id="stage-title">Aqueous electrolysis</strong></div>
+          <span class="inert-badge">Inert graphite electrodes</span>
+        </div>
+        <div class="stage" id="stage">
+          <div class="cell-diagram">
+          <div class="electrode-labels" aria-label="Electrode key">
+            <div class="cathode-caption"><strong>Cathode (−)</strong><span>Particles gain e⁻</span></div>
+            <div class="anode-caption"><strong>Anode (+)</strong><span>Particles lose e⁻</span></div>
+          </div>
+          <div class="apparatus">
+          <svg id="cell" viewBox="0 0 920 580" role="img" aria-labelledby="diagram-title diagram-desc">
+            <title id="diagram-title">Animated electrolytic cell</title>
+            <desc id="diagram-desc">Ions move randomly with the power off. Switching on the DC supply lights the lamp and produces ion drift and reactions at the inert electrodes.</desc>
+            <defs>
+              <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#10283b"/><stop offset="1" stop-color="#071522"/></linearGradient>
+              <linearGradient id="aq" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#1688b4" stop-opacity=".72"/><stop offset="1" stop-color="#0d466e" stop-opacity=".9"/></linearGradient>
+              <linearGradient id="melt" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d6842f" stop-opacity=".78"/><stop offset="1" stop-color="#743a21" stop-opacity=".92"/></linearGradient>
+              <radialGradient id="lampOn"><stop stop-color="#fffef1"/><stop offset=".45" stop-color="#ffe77f"/><stop offset="1" stop-color="#f2a735"/></radialGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="7"/></filter>
+              <clipPath id="liquidClip"><rect x="118" y="264" width="684" height="238" rx="6"/></clipPath>
+              <path id="electronLeft" d="M379 102H252V324"/>
+              <path id="electronRight" d="M668 324V102H541"/>
+            </defs>
+            <rect width="920" height="580" rx="18" fill="url(#bg)"/>
+            <g class="circuit">
+              <path class="wire" d="M379 102H251V219M541 102H669V219"/>
+              <rect class="supply" x="379" y="30" width="162" height="112" rx="14"/>
+              <text x="460" y="59" class="svg-micro" text-anchor="middle">DC SUPPLY</text>
+              <text x="403" y="112" class="terminal minus" text-anchor="middle">−</text>
+              <text x="517" y="112" class="terminal plus" text-anchor="middle">+</text>
+              <circle id="lamp-glow" cx="321" cy="102" r="42" class="lamp-glow"/>
+              <circle cx="321" cy="102" r="27" class="lamp-shell"/>
+              <circle id="lamp" cx="321" cy="102" r="21" class="lamp"/>
+              <path class="filament" d="M309 102l7 7 5-15 6 15 7-7"/>
+              <text x="321" y="148" class="svg-micro" text-anchor="middle">LAMP</text>
+            </g>
+
+            <rect id="liquid" x="118" y="264" width="684" height="238" rx="6" fill="url(#aq)"/>
+            <path class="liquid-line" d="M118 264c55-10 105 10 160 0s105 10 160 0 105 10 160 0 105 10 160 0 44 2 44 2"/>
+            <g id="ion-layer" clip-path="url(#liquidClip)"></g>
+            <g id="product-layer" clip-path="url(#liquidClip)"></g>
+
+            <g class="electrodes">
+              <rect x="238" y="215" width="28" height="272" rx="4" class="electrode"/>
+              <rect x="654" y="215" width="28" height="272" rx="4" class="electrode"/>
+              <rect id="metal-coat" x="234" y="266" width="36" height="219" rx="6" fill="#c87845" opacity="0"/>
+              <path x="245" class="electrode-shine" d="M246 228v244M662 228v244"/>
+            </g>
+            <g id="liquid-metal" style="display:none">
+              <path id="metal-film" stroke="#dfe6ed" stroke-width="1"/>
+              <path id="film-sheen" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <g id="electron-layer"></g>
+            <g id="transfer-layer"></g>
+            <path class="beaker" d="M113 245v245q0 15 15 15h664q15 0 15-15V245"/>
+
+            <g class="ion-key" transform="translate(118 530)">
+              <text x="0" y="12" class="svg-small">Positive ions → cathode (−)</text>
+              <text x="235" y="12" class="svg-small">Negative ions → anode (+)</text>
+            </g>
+          </svg>
+          <button class="supply-switch" id="power" type="button" aria-label="DC supply power" aria-pressed="false" title="Switch on"><span class="switch-cap" aria-hidden="true">⏻</span></button>
+          </div>
+          </div>
+          <div class="paused-overlay" id="paused-overlay"><span>Power off · random ion motion</span></div>
+        </div>
+        <section class="flow-note" aria-labelledby="electrolysis-heading">
+          <h2 id="electrolysis-heading">How electrolysis works</h2>
+          <ol>
+            <li>Pass a direct current through a molten or dissolved electrolyte to break it down.</li>
+            <li>Positive ions move towards the negative cathode. Negative ions move towards the positive anode.</li>
+            <li>At the cathode, reacting particles gain electrons (reduction). At the anode, they lose electrons (oxidation). These reactions form the products.</li>
+          </ol>
+        </section>
+      </div>
+
+      <aside class="learn-card">
+        <div class="learn-tabs" role="tablist" aria-label="Learning information">
+          <button class="active" role="tab" aria-selected="true" data-tab="products">Half-equation quiz</button>
+          <button role="tab" aria-selected="false" data-tab="rules">Why?</button>
+        </div>
+        <div id="products-panel" class="tab-panel">
+          <div class="quiz-intro"><div class="score-row"><strong id="points" aria-live="polite">0 points</strong><button id="reset-points" type="button">Reset quiz points</button></div><p>Drag blocks to a side or select a side and tap blocks. Repeat a block to increase its coefficient. Tap a placed block to remove one. Earn 3, 2 or 1 point on attempts one, two or three. The fourth check opens the worked solution. Opening help makes that question practice only.</p></div>
+          <article class="product-card cathode-card">
+            <div class="product-heading"><span>Cathode (−)</span><em>Reduction</em></div>
+            <h2 id="cathode-name">Hydrogen</h2>
+            <p id="cathode-desc"></p>
+            <form data-side="cat" aria-label="Cathode half-equation"><div class="builder"></div><button type="submit">Check answer</button><p role="status"></p></form>
+          </article>
+          <article class="product-card anode-card">
+            <div class="product-heading"><span>Anode (+)</span><em>Oxidation</em></div>
+            <h2 id="anode-name">Oxygen</h2>
+            <p id="anode-desc"></p>
+            <form data-side="an" aria-label="Anode half-equation"><div class="builder"></div><button type="submit">Check answer</button><p role="status"></p></form>
+          </article>
+        </div>
+        <div id="rules-panel" class="tab-panel hidden">
+          <div class="rule-block"><span>1 · Movement</span><p>Positive ions (cations) move to the negative cathode. Negative ions (anions) move to the positive anode.</p></div>
+          <div class="rule-block"><span>2 · Cathode</span><p id="cathode-rule"></p></div>
+          <div class="rule-block"><span>3 · Anode</span><p id="anode-rule"></p></div>
+          <div class="memory"><strong>OIL RIG</strong><span>Oxidation Is Loss · Reduction Is Gain (of electrons)</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="explanation" aria-live="polite">
+      <span class="explanation-icon">i</span>
+      <div><strong id="explanation-title">What happens?</strong><p id="explanation-text"></p><p id="hydrogen-note"></p><a id="exam-paper" style="color:#96ddff" hidden></a></div>
+    </section>
+
+    <footer>© Dr Gleb Aleshin, made with help of ChatGPT</footer>
+  </main>
+  <script src="quiz.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

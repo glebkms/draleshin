@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08131f">
+  <title>Electrochemical Cell Lab</title>
+  <meta name="description" content="Interactive A-level galvanic cell simulator with Nernst calculations and particle flow.">
+  <link rel="stylesheet" href="styles.css?v=10">
+</head>
+<body>
+  <a class="skip" href="#lab">Skip to simulator</a>
+  <header class="topbar">
+    <div>
+      <a class="home-link" href="../">All demonstrations</a>
+      <p class="eyebrow">A-level chemistry · interactive practical</p>
+      <h1>Electrochemical Cell Lab</h1>
+    </div>
+    <div class="header-actions">
+      <button class="button secondary" id="explainBtn" type="button" aria-haspopup="dialog">Teaching notes</button>
+      <button class="button" id="resetBtn" type="button">Reset experiment</button>
+    </div>
+  </header>
+
+  <main id="lab">
+    <section class="control-strip" aria-label="Experiment controls">
+      <label>Temperature <span><output id="tempOut">298.15</output> K</span>
+        <input id="temperature" type="range" min="273.15" max="333.15" step="0.5" value="298.15">
+      </label>
+      <label>Motion scale · rate ∝ voltage <span><output id="speedOut">1.1×</output></span>
+        <input id="speed" type="range" min="0.5" max="1.5" step="0.25" value="1">
+      </label>
+      <button class="button secondary" id="pauseBtn" type="button" aria-pressed="false">Pause motion</button>
+      <button class="load-button" id="loadSwitch" type="button" aria-pressed="false">
+        <span class="load-button-main">TURN ON</span>
+        <span class="load-button-sub">Start electron &amp; ion flow</span>
+      </button>
+    </section>
+
+    <section class="workspace" aria-label="Electrochemical cell experiment">
+      <div class="bench-heading">
+        <div class="status-pill" id="directionPill">Electrons: left → right</div>
+        <p id="liveSummary" aria-live="polite">A spontaneous galvanic cell is ready.</p>
+      </div>
+
+      <div class="cell-stage">
+        <svg id="cellSvg" viewBox="0 0 1200 570" role="img" aria-labelledby="svgTitle svgDesc">
+          <title id="svgTitle">Interactive electrochemical cell diagram</title>
+          <desc id="svgDesc">Two half-cells connected by an external wire, voltmeter, switchable lamp and salt bridge.</desc>
+          <defs>
+            <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dff5ff" stop-opacity=".3"/><stop offset="1" stop-color="#66c5e3" stop-opacity=".12"/></linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="14" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+
+          <path class="wire" d="M260 178 V82 H555"/>
+          <path class="wire" d="M645 82 H720 M792 82 H940 V178"/>
+          <g class="circuit-switch" id="circuitSwitch" aria-hidden="true">
+            <circle cx="724" cy="82" r="7"/>
+            <circle cx="788" cy="82" r="7"/>
+            <path class="switch-blade" id="switchBlade" d="M724 82 L779 54"/>
+            <text x="756" y="118">LOAD SWITCH</text>
+          </g>
+          <path class="meter-wire" d="M260 150 V170 H554 M646 170 H940 V150"/>
+          <g class="meter" aria-label="Voltmeter">
+            <circle cx="600" cy="170" r="42"/>
+            <text x="600" y="164" class="meter-v">V</text>
+            <text x="600" y="187" id="svgVoltage">+1.100 V</text>
+          </g>
+
+          <g class="lamp" id="lampGraphic" aria-label="Lamp load disconnected">
+            <circle class="lamp-halo" cx="600" cy="82" r="53"/>
+            <path class="lamp-bulb" d="M577 73a24 24 0 1 1 46 0c-3 10-12 14-12 25h-22c0-11-9-15-12-25Z"/>
+            <path class="lamp-base" d="M590 101h20m-18 7h16"/>
+            <path class="lamp-filament" d="m589 77 11 9 11-9"/>
+            <text x="600" y="31" id="lampLabel">LOAD OPEN</text>
+          </g>
+
+          <g class="salt-bridge">
+            <path d="M405 350v-38c0-55 50-82 113-82h164c63 0 113 27 113 82v38"/>
+            <path class="bridge-inner" d="M405 350v-38c0-55 50-82 113-82h164c63 0 113 27 113 82v38"/>
+            <text x="600" y="238">KNO₃ SALT BRIDGE</text>
+          </g>
+
+          <g id="leftCell" class="half-cell">
+            <path class="beaker" d="M120 255v235c0 28 22 48 50 48h260c28 0 50-20 50-48V255"/>
+            <path class="solution left-solution" d="M137 337h326v150c0 20-16 35-36 35H173c-20 0-36-15-36-35Z"/>
+            <g class="she-visual" id="leftSHE" hidden aria-label="Hydrogen gas tube, platinum electrode and hydrogen bubbles">
+              <path class="gas-chamber" d="M216 175h88v210l-14 16v36h-60v-36l-14-16Z"/>
+              <path class="gas-inlet" d="M260 175v-48q0-16 16-16h39"/>
+              <text class="gas-label" x="324" y="118">H₂(g)</text>
+              <g class="hydrogen-bubbles">
+                <circle class="bubble" cx="229" cy="421" r="7"/><circle class="bubble" cx="224" cy="396" r="5"/><circle class="bubble" cx="231" cy="369" r="4"/><circle class="bubble" cx="291" cy="422" r="8"/><circle class="bubble" cx="296" cy="392" r="6"/><circle class="bubble" cx="290" cy="362" r="4"/>
+              </g>
+            </g>
+            <rect class="electrode" id="leftElectrode" x="238" y="175" width="44" height="263" rx="7"/>
+            <text class="electrode-label" id="leftSymbol" x="260" y="237">Zn</text>
+            <text class="solution-label" id="leftSolutionLabel" x="300" y="470">Zn²⁺(aq)</text>
+            <g class="role-badge" id="leftRole"><rect x="166" y="267" width="116" height="38" rx="19"/><text x="224" y="292">ANODE −</text></g>
+          </g>
+          <g id="rightCell" class="half-cell">
+            <path class="beaker" d="M720 255v235c0 28 22 48 50 48h260c28 0 50-20 50-48V255"/>
+            <path class="solution right-solution" d="M737 337h326v150c0 20-16 35-36 35H773c-20 0-36-15-36-35Z"/>
+            <g class="she-visual" id="rightSHE" hidden aria-label="Hydrogen gas tube, platinum electrode and hydrogen bubbles">
+              <path class="gas-chamber" d="M896 175h88v210l-14 16v36h-60v-36l-14-16Z"/>
+              <path class="gas-inlet" d="M940 175v-48q0-16-16-16h-39"/>
+              <text class="gas-label" x="876" y="118">H₂(g)</text>
+              <g class="hydrogen-bubbles">
+                <circle class="bubble" cx="909" cy="421" r="7"/><circle class="bubble" cx="904" cy="396" r="5"/><circle class="bubble" cx="911" cy="369" r="4"/><circle class="bubble" cx="971" cy="422" r="8"/><circle class="bubble" cx="976" cy="392" r="6"/><circle class="bubble" cx="970" cy="362" r="4"/>
+              </g>
+            </g>
+            <rect class="electrode" id="rightElectrode" x="918" y="175" width="44" height="263" rx="7"/>
+            <text class="electrode-label" id="rightSymbol" x="940" y="237">Cu</text>
+            <text class="solution-label" id="rightSolutionLabel" x="900" y="470">Cu²⁺(aq)</text>
+            <g class="role-badge cathode" id="rightRole"><rect x="918" y="267" width="130" height="38" rx="19"/><text x="983" y="292">CATHODE +</text></g>
+          </g>
+
+          <g id="particles" aria-hidden="true"></g>
+        </svg>
+      </div>
+
+      <div class="equilibrium-strip" aria-label="Half-cell equilibrium directions">
+        <article class="half-equilibrium shift-left" id="leftEquilibrium">
+          <p class="eyebrow">Left reduction equilibrium</p>
+          <div class="eq-line">
+            <span class="eq-side eq-oxidised" id="leftOxidised">Zn²⁺(aq) + 2e⁻</span>
+            <span class="eq-arrows" aria-hidden="true"><span class="eq-arrow forward"><span class="arrow-shaft"></span><span class="arrow-head"></span></span><span class="eq-arrow reverse"><span class="arrow-head"></span><span class="arrow-shaft"></span></span></span>
+            <span class="eq-side eq-reduced" id="leftReduced">Zn(s)</span>
+          </div>
+          <p class="shift-label" id="leftShiftLabel">Shift towards oxidised form · anode</p>
+        </article>
+        <article class="half-equilibrium shift-right" id="rightEquilibrium">
+          <p class="eyebrow">Right reduction equilibrium</p>
+          <div class="eq-line">
+            <span class="eq-side eq-oxidised" id="rightOxidised">Cu²⁺(aq) + 2e⁻</span>
+            <span class="eq-arrows" aria-hidden="true"><span class="eq-arrow forward"><span class="arrow-shaft"></span><span class="arrow-head"></span></span><span class="eq-arrow reverse"><span class="arrow-head"></span><span class="arrow-shaft"></span></span></span>
+            <span class="eq-side eq-reduced" id="rightReduced">Cu(s)</span>
+          </div>
+          <p class="shift-label" id="rightShiftLabel">Shift towards reduced form · cathode</p>
+        </article>
+        <p class="equilibrium-scale" id="equilibriumScale">Current-condition equilibrium shift: log₁₀(K/Q) = 37.2 · visual weight scales up to 50 decades</p>
+      </div>
+
+      <div class="readout-grid">
+        <article class="voltage-card">
+          <p class="eyebrow">Calculated open-circuit EMF</p>
+          <div class="big-voltage"><span id="polarity">+</span><output id="voltage">1.103</output><small>V</small></div>
+          <div class="terminal-row"><span id="leftTerminal">LEFT −</span><span id="rightTerminal">RIGHT +</span></div>
+          <p id="cellCondition">Spontaneous as drawn · cathode is positive</p>
+        </article>
+        <article class="lamp-card" id="lampCard">
+          <div class="mini-lamp" aria-hidden="true"><span></span></div>
+          <div><p class="eyebrow">Load indicator</p><strong id="lampState">Lamp disconnected</strong><p id="lampNote">The voltmeter is reading open-circuit EMF; no lamp current is implied.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="setup-grid" aria-label="Half-cell settings">
+      <article class="panel electrode-panel" id="leftPanel">
+        <div class="panel-title"><span class="side-dot left"></span><div><p class="eyebrow">Left half-cell</p><h2 id="leftTitle">Zn²⁺ / Zn</h2></div><span class="role-chip" id="leftChip">Anode</span></div>
+        <label>Choose electrode<select id="leftSelect"></select></label>
+        <label id="leftConcWrap">Ion concentration <span><output id="leftConcOut">1.00</output> mol dm⁻³</span><input id="leftConc" type="range" min="-4" max="1" step="0.05" value="0"></label>
+        <label id="leftPressureWrap" hidden>H₂ pressure <span><output id="leftPressureOut">1.00</output> bar</span><input id="leftPressure" type="range" min="-2" max="1" step="0.05" value="0"></label>
+        <dl class="chem-data"><div><dt>Standard E°</dt><dd id="leftE0">−0.76 V</dd></div><div><dt>Adjusted E</dt><dd id="leftE">−0.760 V</dd></div></dl>
+        <p class="half-equation" id="leftEquation">Zn²⁺ + 2e⁻ ⇌ Zn(s)</p>
+        <p class="practical-warning" id="leftWarning" hidden></p>
+      </article>
+
+      <article class="panel equation-panel">
+        <p class="eyebrow">Cell chemistry</p>
+        <h2 id="reactionTitle">Zinc–copper cell</h2>
+        <div class="equation-block"><span>Oxidation</span><p id="oxidationEq">Zn(s) → Zn²⁺(aq) + 2e⁻</p></div>
+        <div class="equation-block"><span>Reduction</span><p id="reductionEq">Cu²⁺(aq) + 2e⁻ → Cu(s)</p></div>
+        <div class="equation-block net"><span>Net ionic equation</span><p id="netEq">Zn(s) + Cu²⁺(aq) → Zn²⁺(aq) + Cu(s)</p></div>
+        <button class="text-button" id="toggleWorking" type="button" aria-expanded="false">Show Nernst working</button>
+        <div id="working" class="working" hidden></div>
+      </article>
+
+      <article class="panel electrode-panel" id="rightPanel">
+        <div class="panel-title"><span class="side-dot right"></span><div><p class="eyebrow">Right half-cell</p><h2 id="rightTitle">Cu²⁺ / Cu</h2></div><span class="role-chip cathode" id="rightChip">Cathode</span></div>
+        <label>Choose electrode<select id="rightSelect"></select></label>
+        <label id="rightConcWrap">Ion concentration <span><output id="rightConcOut">1.00</output> mol dm⁻³</span><input id="rightConc" type="range" min="-4" max="1" step="0.05" value="0"></label>
+        <label id="rightPressureWrap" hidden>H₂ pressure <span><output id="rightPressureOut">1.00</output> bar</span><input id="rightPressure" type="range" min="-2" max="1" step="0.05" value="0"></label>
+        <dl class="chem-data"><div><dt>Standard E°</dt><dd id="rightE0">+0.34 V</dd></div><div><dt>Adjusted E</dt><dd id="rightE">+0.340 V</dd></div></dl>
+        <p class="half-equation" id="rightEquation">Cu²⁺ + 2e⁻ ⇌ Cu(s)</p>
+        <p class="practical-warning" id="rightWarning" hidden></p>
+      </article>
+    </section>
+
+    <section class="concept-band">
+      <div><span class="concept-number">E°</span><p><strong>Standard potential is a reference value.</strong> It is tabulated for standard conditions and does not change when you move the sliders.</p></div>
+      <div><span class="concept-number">E</span><p><strong>Electrode potential depends on conditions.</strong> The Nernst equation adjusts E using concentration, pressure and temperature.</p></div>
+      <div><span class="concept-number">I</span><p><strong>Voltage is not current.</strong> Useful current also depends on electrode area, kinetics, internal resistance and the external load.</p></div>
+    </section>
+  </main>
+
+  <dialog id="explainDialog">
+    <div class="dialog-head"><div><p class="eyebrow">Teacher overlay</p><h2>How to read the model</h2></div><button id="closeDialog" class="icon-button" aria-label="Close teaching notes">×</button></div>
+    <div class="dialog-grid">
+      <section><h3>What students should notice</h3><ul><li>The half-cell with the more positive reduction potential is the cathode.</li><li>Oxidation occurs at the anode; electrons leave it through the wire.</li><li>Salt-bridge cations migrate toward the cathode and anions toward the anode to maintain electrical neutrality.</li><li>Changing concentration changes E, not the tabulated E°.</li></ul></section>
+      <section><h3>Assumptions</h3><ul><li>Concentration is used as an approximation to activity.</li><li>Pure solids have unit activity and gases behave ideally.</li><li>Liquid-junction potential, internal resistance and kinetic overpotential are not modeled.</li><li>The displayed EMF is the reversible, open-circuit value.</li><li>Na, Ca and K couples are reference data only: those metals react with water, so the pictured aqueous half-cell is not experimentally viable.</li></ul></section>
+      <section><h3>Good discussion prompt</h3><p>“If the voltmeter reads 1.10 V, will this lamp definitely glow?”</p><p><strong>No.</strong> Voltage is the energy transferred per coulomb. It does not tell us how many coulombs per second the cell can deliver.</p></section>
+      <section><h3>Sign convention</h3><p>E<sub>cell</sub> = E<sub>cathode</sub> − E<sub>anode</sub>, using reduction potentials for both. The simulation always reports the spontaneous direction, so the magnitude is non-negative.</p></section>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=10"></script>
+</body>
+</html>

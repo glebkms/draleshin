@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b131c">
+  <meta name="description" content="Explore metallic bonding, conduction and alloys with an interactive GCSE Chemistry model and quiz.">
+  <title>Metallic Bonding Lab</title>
+  <link rel="stylesheet" href="./lab.css?v=6">
+  <script src="./lab.js?v=6" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><span>+</span><i></i><span>+</span><i></i><span>+</span><i></i></div>
+        <div><p class="eyebrow">Interactive Chemistry · GCSE</p><h1>Metallic Bonding Lab</h1></div>
+      </div>
+      <div class="masthead-actions">
+        <a class="home-link" href="https://draleshin.pages.dev/">All demonstrations</a>
+        <span class="status" id="status" role="status">Random motion</span>
+      </div>
+    </header>
+
+    <section class="controls panel" aria-label="Experiment controls">
+      <div class="experiment">
+        <span class="field-label" id="experiment-label">Experiment</span>
+        <div class="segmented" aria-labelledby="experiment-label" role="group" id="experiments">
+          <button type="button" data-mode="structure" aria-pressed="true">Structure</button>
+          <button type="button" data-mode="electricity" aria-pressed="false">Electricity</button>
+          <button type="button" data-mode="heat" aria-pressed="false">Heat</button>
+          <button type="button" data-mode="hammer" aria-pressed="false">Hammer test</button>
+        </div>
+      </div>
+      <div>
+        <span class="field-label" id="sample-label">Sample</span>
+        <div class="segmented" aria-labelledby="sample-label" role="group" id="samples">
+          <button type="button" data-sample="pure" aria-pressed="true">Pure metal</button>
+          <button type="button" data-sample="alloy" aria-pressed="false">Alloy</button>
+        </div>
+      </div>
+      <div class="speed">
+        <label class="field-label" for="speed">Animation speed <output id="speed-value" for="speed">1×</output></label>
+        <input type="range" id="speed" min="0.25" max="1.75" step="0.25" value="1">
+      </div>
+      <button type="button" class="secondary reset" id="reset">Reset model</button>
+    </section>
+
+    <div class="workspace">
+      <section class="model panel" aria-labelledby="model-heading">
+        <header class="model-header">
+          <div><p class="eyebrow">Live model</p><h2 id="model-heading">Inside a metal</h2></div>
+          <span class="sample-badge" id="sample-badge">Pure metal</span>
+        </header>
+        <div class="model-controls">
+          <p id="readout">Electrons move freely between the layers.</p>
+          <div class="model-actions">
+            <button type="button" class="primary" id="action" hidden></button>
+            <button type="button" class="secondary" id="pause" aria-pressed="false">Pause motion</button>
+          </div>
+        </div>
+        <div class="stage">
+          <canvas id="lattice" width="800" height="444" aria-label="Animated particle model of metallic bonding" aria-describedby="stage-description"></canvas>
+          <p id="stage-description" class="sr-only">Positive metal ions vibrate around fixed positions. Delocalised electrons move randomly between them.</p>
+        </div>
+        <div class="legend" aria-label="Particle key">
+          <span><i class="ion-key" aria-hidden="true">+</i>Positive metal ion</span>
+          <span><i class="electron-key" aria-hidden="true">−</i>Delocalised electron</span>
+          <span id="alloy-key" hidden><i class="alloy-key" aria-hidden="true">+</i>Different-sized ion</span>
+          <span id="ionic-key" hidden><i class="ionic-key" aria-hidden="true">−</i>Negative ion in ionic solid</span>
+        </div>
+      </section>
+
+      <aside class="learning panel" aria-label="Learning activities">
+        <div class="tabs" role="tablist" aria-label="Learning activities">
+          <button type="button" role="tab" id="explore-tab" aria-selected="true" aria-controls="explore">Investigate</button>
+          <button type="button" role="tab" id="quiz-tab" aria-selected="false" aria-controls="quiz" tabindex="-1">GCSE quiz</button>
+        </div>
+        <section id="explore" role="tabpanel" aria-labelledby="explore-tab" tabindex="0">
+          <div class="explanation">
+            <p class="eyebrow" id="topic">Structure and bonding</p>
+            <h2 id="concept">What holds a metal together?</h2>
+            <p id="explain"></p>
+          </div>
+          <div class="observation">
+            <h3 id="task-title">Try this</h3>
+            <p id="task"></p>
+          </div>
+          <div class="measurements" id="measurements" hidden></div>
+          <section class="comparison" id="comparison" aria-labelledby="comparison-heading" hidden>
+            <h3 id="comparison-heading">Top-layer shift after one strike</h3>
+            <dl class="measurements">
+              <div class="measure"><dt>Pure metal</dt><dd id="pure-result">Awaiting strike</dd></div>
+              <div class="measure"><dt>Alloy</dt><dd id="alloy-result">Awaiting strike</dd></div>
+            </dl>
+          </section>
+          <p class="model-note">This 2D model exaggerates particle motion. Particle sizes and distances are illustrative.</p>
+        </section>
+
+        <section id="quiz" role="tabpanel" aria-labelledby="quiz-tab" tabindex="0" hidden>
+          <div class="quiz-top">
+            <h2>Exam practice</h2>
+            <span id="marks" aria-live="polite">0 / 9 marks</span>
+          </div>
+          <div class="question-nav" role="group" aria-label="Choose a question">
+            <button type="button" data-question="0" aria-pressed="true">Structure</button>
+            <button type="button" data-question="1" aria-pressed="false">Electricity</button>
+            <button type="button" data-question="2" aria-pressed="false">Heat</button>
+          </div>
+          <div id="questions">
+            <section class="question" data-page="0" aria-labelledby="structure-question">
+              <span class="question-marks">4 marks</span>
+              <h3 id="structure-question">Describe the structure and bonding in a pure metal.</h3>
+              <p class="sentence">A pure metal has <button type="button" class="blank" data-slot="0"></button> arranged in
+                <button type="button" class="blank" data-slot="1"></button>.</p>
+              <p class="sentence">Strong <button type="button" class="blank" data-slot="2"></button>
+                holds these ions and a sea of <button type="button" class="blank" data-slot="3"></button> together.</p>
+            </section>
+            <section class="question" data-page="1" aria-labelledby="electricity-question" hidden>
+              <span class="question-marks">3 marks</span>
+              <h3 id="electricity-question">Explain why a solid metal wire conducts electricity.</h3>
+              <p class="sentence">The metal contains <button type="button" class="blank" data-slot="0"></button>.</p>
+              <p class="sentence">When a potential difference is applied, they <button type="button" class="blank" data-slot="1"></button> and carry
+                <button type="button" class="blank" data-slot="2"></button> through the wire.</p>
+            </section>
+            <section class="question" data-page="2" aria-labelledby="heat-question" hidden>
+              <span class="question-marks">2 marks</span>
+              <h3 id="heat-question">Explain why the handle of a metal spoon warms up when the other end is placed in hot water.</h3>
+              <p class="sentence">At the hot end, delocalised electrons <button type="button" class="blank" data-slot="0"></button>.</p>
+              <p class="sentence">As they move through the metal, they <button type="button" class="blank" data-slot="1"></button>.</p>
+            </section>
+          </div>
+          <p class="model-note">Original questions aligned with <a href="https://www.aqa.org.uk/subjects/chemistry/gcse/chemistry-8462/specification/subject-content/bonding-structure-and-the-properties-of-matter" target="_blank" rel="noopener">AQA GCSE Chemistry</a>.</p>
+        </section>
+      </aside>
+    </div>
+    <footer>© Dr Gleb Aleshin. Made with assistance of AI</footer>
+  </main>
+  <template id="answer-controls">
+    <p class="answer-instructions">Drag a tile into a box or select a tile and then a box. Select a filled box on its own to empty it.</p>
+    <div class="word-bank" role="group" aria-label="Answer tiles"></div>
+    <div class="question-actions">
+      <button type="button" class="primary check-answer">Check answer</button>
+      <button type="button" class="secondary clear-answer">Clear</button>
+    </div>
+    <p class="feedback" role="status"></p>
+  </template>
+</body>
+</html>

@@ -8,3 +8,12 @@
 .gas-chamber{fill:#dff8ff;fill-opacity:.14;stroke:#e9f8ff;stroke-opacity:.8;stroke-width:8;stroke-linejoin:round}.gas-inlet{fill:none;stroke:#e9f8ff;stroke-opacity:.9;stroke-width:10;stroke-linecap:round;stroke-linejoin:round}.bubble{fill:#e9fbff;fill-opacity:.48;stroke:#fff;stroke-width:2.5;animation:none}.motion-paused .bubble{animation-play-state:initial}
 .equilibrium-scale::before{content:"THERMODYNAMIC SHIFT · "}
 .particle-metal-ion{stroke:#fff;stroke-width:2.5;filter:drop-shadow(0 0 5px #ffffff55)}.deposit-flash{stroke:#fff;stroke-width:2;filter:drop-shadow(0 0 7px #ffffffaa)}
+
+.site-credit {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 3rem) 1.5rem;
+  color: var(--muted);
+  font-size: .85rem;
+  text-align: center;
+}

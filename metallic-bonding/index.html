@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0b131c">
   <meta name="description" content="Explore metallic bonding, conduction and alloys with an interactive GCSE Chemistry model and quiz.">
   <title>Metallic Bonding Lab</title>
-  <link rel="stylesheet" href="./lab.css?v=6">
-  <script src="./lab.js?v=6" defer></script>
+  <link rel="stylesheet" href="./lab.css?v=7">
+  <script src="./lab.js?v=7" defer></script>
 </head>
 <body>
   <main class="app">
@@ -61,6 +61,8 @@
         </div>
         <div class="stage">
           <canvas id="lattice" width="800" height="444" aria-label="Animated particle model of metallic bonding" aria-describedby="stage-description"></canvas>
+          <button type="button" class="equipment-control power-control" id="power" aria-label="Switch power on" aria-pressed="false" hidden>Power on</button>
+          <button type="button" class="primary equipment-control hammer-control" id="strike" hidden>Hit with hammer</button>
           <p id="stage-description" class="sr-only">Positive metal ions vibrate around fixed positions. Delocalised electrons move randomly between them.</p>
         </div>
         <div class="legend" aria-label="Particle key">

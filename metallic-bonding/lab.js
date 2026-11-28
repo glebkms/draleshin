@@ -8,6 +8,7 @@
     speed: 1,
     paused: matchMedia("(prefers-reduced-motion: reduce)").matches,
     power: false,
+    circuitDrift: 0,
     heating: false,
     heaterLevel: 0,
     strikes: 0,
@@ -27,7 +28,7 @@
       heading: "Electrical conduction",
       topic: "Electricity",
       concept: "What carries the charge?",
-      explain: "A potential difference causes the delocalised electrons to drift towards the positive terminal. They still move randomly, but their net movement carries charge through the metal. The positive ions vibrate around their lattice positions.",
+      explain: "Electrons in the metal and wires move randomly. A potential difference adds an overall drift towards the positive terminal, carrying charge around the circuit. The positive ions vibrate around their lattice positions.",
       task: "Follow electrons from the negative terminal, through the metal and lamp, and into the positive terminal."
     },
     heat: {
@@ -56,13 +57,20 @@
   const top = 127;
   const bottom = 356;
   const middle = (top + bottom) / 2;
-  // The return lead, supply and outgoing lead form one continuous path.
-  const wirePoints = [[right - 5, middle], [711, middle], [711, 82], [89, 82], [89, middle], [left + 5, middle]];
-  const wireSegments = wirePoints.slice(1).map(([endX, endY], index) => {
-    const [x, y] = wirePoints[index];
-    return { x, y, dx: endX - x, dy: endY - y, length: Math.hypot(endX - x, endY - y) };
-  });
-  const wireLength = wireSegments.reduce((length, part) => length + part.length, 0);
+  const wireY = 83;
+  const bulbX = 575;
+  const metalColumns = 9;
+  const leadSlots = 3;
+  const lanes = [145, 181, 219, 258, 301, 337].map((y, index) => ({
+    y,
+    metalSlots: index % 2 === 0 ? 8 : 7,
+    outgoing: wirePath([[324, wireY], [93, wireY], [93, y], [left, y]]),
+    returning: wirePath([[right, y], [711, y], [711, wireY], [590, wireY], [581, 52], [569, 52], [560, wireY], [476, wireY]])
+  }));
+  // Regular spacing gives every lane about one mobile electron per metal ion.
+  const circuitElectrons = lanes.flatMap((lane, index) => Array.from({ length: lane.metalSlots + 2 * leadSlots }, (_, slot) => ({
+    lane, phase: slot + (index * .37) % 1, along: 0, across: 0, nextAlong: 0, nextAcross: 0, turn: random(.35)
+  })));
   const slipPlane = 218.5;
   const ionicOffset = 248;
   const swingTime = .72;
@@ -78,18 +86,14 @@
     const negative = (row + column) % 2 === 1;
     return { x: 163 + column * 42.75, y: 151 + ionicOffset + row * 45, row, column, negative, radius: negative ? 22 : 19 };
   });
-  const electrons = Array.from({ length: 62 }, () => ({
-    x: left + 7 + random(right - left - 14),
-    y: top + 7 + random(bottom - top - 14),
-    angle: random(2 * Math.PI),
-    turn: .09 + random(.42),
-    warmth: 0,
-    wire: null,
-    entryY: middle
-  }));
+  const electrons = ions.map((_, index) => freeElectron(index));
+  const spacingX = new Float64Array(electrons.length);
+  const spacingY = new Float64Array(electrons.length);
   const canvas = byId("lattice");
   const ctx = canvas.getContext("2d");
-  const modelAction = byId("action");
+  const heaterButton = byId("action");
+  const powerButton = byId("power");
+  const hammerButton = byId("strike");
   const pauseButton = byId("pause");
   const readout = byId("readout");
   const status = byId("status");
@@ -100,6 +104,13 @@
   const topLayerShift = () => Math.min(lab.strikes * (alloy() ? 5 : 53), alloy() ? 15 : 90);
   const degrees = (value) => Math.round(20 + 150 * value) + " °C";
   const modelDistance = (value) => Math.round(value) + " model units";
+  function freeElectron(index) {
+    return {
+      x: left + (index % metalColumns + .24 + random(.52)) * (right - left) / metalColumns,
+      y: top + (Math.floor(index / metalColumns) + .24 + random(.52)) * (bottom - top) / (ions.length / metalColumns),
+      angle: random(2 * Math.PI), turn: .1 + random(.35), warmth: 0
+    };
+  }
   function localHeat(x, values = heat) {
     const point = limit((x - left) / (right - left), 0, 1) * (values.length - 1);
     const low = Math.floor(point);
@@ -173,11 +184,15 @@
     const labels = { structure: "Random motion", electricity: lab.power ? "Power on" : "Power off", heat: lab.heating ? "Heating both samples" : "Heater off", hammer: lab.strikes ? "Sample struck" : "Ready to strike" };
     status.textContent = lab.paused ? "Motion paused" : labels[lab.mode];
     status.classList.toggle("active", !lab.paused && (engaged || lab.strikes > 0));
-    modelAction.hidden = lab.mode === "structure";
-    modelAction.textContent = { structure: "", electricity: lab.power ? "Switch power off" : "Switch power on", heat: lab.heating ? "Turn heater off" : "Heat both left ends", hammer: "Hit with hammer" }[lab.mode];
-    modelAction.classList.toggle("engaged", engaged);
-    if (lab.mode === "electricity" || lab.mode === "heat") modelAction.setAttribute("aria-pressed", engaged);
-    else modelAction.removeAttribute("aria-pressed");
+    heaterButton.hidden = lab.mode !== "heat";
+    heaterButton.textContent = lab.heating ? "Turn heater off" : "Heat both left ends";
+    heaterButton.classList.toggle("engaged", lab.heating);
+    heaterButton.setAttribute("aria-pressed", lab.heating);
+    powerButton.hidden = lab.mode !== "electricity";
+    powerButton.textContent = lab.power ? "Power off" : "Power on";
+    powerButton.setAttribute("aria-label", lab.power ? "Switch power off" : "Switch power on");
+    powerButton.setAttribute("aria-pressed", lab.power);
+    hammerButton.hidden = lab.mode !== "hammer";
     pauseButton.textContent = lab.paused ? "Resume motion" : "Pause motion";
     pauseButton.setAttribute("aria-pressed", lab.paused);
     comparison.hidden = lab.mode !== "hammer";
@@ -192,6 +207,7 @@
 
   function resetTrial({ clearComparison = false } = {}) {
     lab.power = false;
+    lab.circuitDrift = 0;
     lab.heating = false;
     lab.heaterLevel = 0;
     lab.strikes = 0;
@@ -201,9 +217,7 @@
     ionicHeat.fill(0);
     ions.forEach((ion) => { ion.bump = 0; });
     electrons.forEach((electron, index) => {
-      electron.warmth = 0;
-      electron.wire = lab.mode === "electricity" && index < 18 ? (index + .5) * wireLength / 18 : null;
-      electron.entryY = middle;
+      Object.assign(electron, freeElectron(index));
     });
     if (clearComparison) firstStrike.pure = firstStrike.alloy = null;
   }
@@ -238,21 +252,29 @@
     }
     renderState();
   });
-  modelAction.addEventListener("click", () => {
-    if (lab.mode === "electricity") lab.power = !lab.power;
-    if (lab.mode === "heat") lab.heating = !lab.heating;
-    if (lab.mode === "hammer") {
-      if (lab.impact > 0) return;
-      lab.strikes++;
-      if (lab.strikes === 1) firstStrike[lab.sample] = topLayerShift();
-      if (lab.paused) lab.shift = topLayerShift();
-      else lab.impact = swingTime;
-    }
+  powerButton.addEventListener("click", () => {
+    lab.power = !lab.power;
+    renderState();
+  });
+  heaterButton.addEventListener("click", () => {
+    lab.heating = !lab.heating;
+    renderState();
+  });
+  hammerButton.addEventListener("click", () => {
+    if (lab.impact > 0) return;
+    lab.strikes++;
+    if (lab.strikes === 1) firstStrike[lab.sample] = topLayerShift();
+    if (lab.paused) lab.shift = topLayerShift();
+    else lab.impact = swingTime;
     renderState();
   });
 
   function simulate(dt) {
     lab.time += dt;
+    if (lab.mode === "electricity") {
+      moveCircuitElectrons(dt);
+      return;
+    }
     let hotIons = null;
     if (lab.mode === "heat") {
       const rate = lab.heating ? 2 : 5;
@@ -264,56 +286,80 @@
         return { ion, ...metalIonPosition(ion) };
       });
     }
-    if (lab.impact > 0) lab.impact = Math.max(0, lab.impact - dt);
-    if (lab.impact < .4) {
-      const recoil = alloy() ? 12 * Math.sin(Math.PI * lab.impact / .4) : 0;
-      lab.shift += (topLayerShift() + recoil - lab.shift) * (1 - Math.exp(-dt * 15));
-    }
-    for (const electron of electrons) {
-      if (electron.wire !== null) {
-        if (lab.power) advanceThroughWire(electron, dt);
-        continue;
+    if (lab.mode === "hammer") {
+      if (lab.impact > 0) lab.impact = Math.max(0, lab.impact - dt);
+      if (lab.impact < .4) {
+        const recoil = alloy() ? 12 * Math.sin(Math.PI * lab.impact / .4) : 0;
+        lab.shift += (topLayerShift() + recoil - lab.shift) * (1 - Math.exp(-dt * 15));
       }
+    }
+    moveFreeElectrons(hotIons, dt);
+  }
+
+  function moveCircuitElectrons(dt) {
+    if (lab.power) lab.circuitDrift += dt * 1.16;
+    const response = 1 - Math.exp(-dt * 8);
+    for (const electron of circuitElectrons) {
+      electron.turn -= dt;
+      if (electron.turn <= 0) {
+        electron.nextAlong = random(2) - 1;
+        electron.nextAcross = random(2) - 1;
+        electron.turn = .12 + random(.28);
+      }
+      electron.along += (electron.nextAlong - electron.along) * response;
+      electron.across += (electron.nextAcross - electron.across) * response;
+    }
+  }
+
+  function electronSpacing() {
+    // A soft repulsion keeps the random walkers dispersed without moving them between cells.
+    spacingX.fill(0);
+    spacingY.fill(0);
+    const range = 72;
+    for (let index = 0; index < electrons.length; index++) {
+      const electron = electrons[index];
+      for (let other = index + 1; other < electrons.length; other++) {
+        const dx = electron.x - electrons[other].x;
+        const dy = electron.y - electrons[other].y;
+        const distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared >= range * range || distanceSquared < .01) continue;
+        const distance = Math.sqrt(distanceSquared);
+        const force = (1 - distance / range) ** 2 * 290 / distance;
+        spacingX[index] += dx * force;
+        spacingY[index] += dy * force;
+        spacingX[other] -= dx * force;
+        spacingY[other] -= dy * force;
+      }
+    }
+  }
+
+  function moveFreeElectrons(hotIons, dt) {
+    electronSpacing();
+    for (const [index, electron] of electrons.entries()) {
       electron.turn -= dt;
       if (electron.turn <= 0) {
         electron.angle += random(2.1) - 1.05;
         electron.turn = .12 + random(.36);
       }
-      // The tint and speed follow the electron as it moves through the temperature gradient.
-      electron.warmth += (localHeat(electron.x) - electron.warmth) * (1 - Math.exp(-dt * 5));
-      const velocity = 38 + electron.warmth * 132;
-      const drift = lab.power ? 96 : 0;
-      electron.x += (Math.cos(electron.angle) * velocity + drift) * dt;
-      electron.y += Math.sin(electron.angle) * velocity * dt;
-      if (lab.power) {
-        const funnel = limit((electron.x - right + 121) / 116, 0, 1);
-        electron.y += (middle - electron.y) * funnel * 5 * dt;
-      }
+      const warmth = localHeat(electron.x);
+      electron.warmth += (warmth - electron.warmth) * (1 - Math.exp(-dt * 5));
+      const velocity = 48 + electron.warmth * 94;
+      const vx = Math.cos(electron.angle) * velocity + spacingX[index];
+      const vy = Math.sin(electron.angle) * velocity + spacingY[index];
+      electron.angle = Math.atan2(vy, vx);
+      const speed = Math.hypot(vx, vy) || 1;
+      electron.x += vx / speed * velocity * dt;
+      electron.y += vy / speed * velocity * dt;
       if (electron.y < top + 5 || electron.y > bottom - 5) {
         electron.y = limit(electron.y, top + 5, bottom - 5);
         electron.angle *= -1;
       }
-      if (lab.power && electron.x >= right - 5) {
-        if (Math.abs(electron.y - middle) < 9) {
-          electron.wire = electron.x - (right - 5);
-          electron.entryY = electron.y;
-        }
-        electron.x = right - 5;
-      } else if (electron.x < left + 5 || electron.x > right - 5) {
+      if (electron.x < left + 5 || electron.x > right - 5) {
         electron.x = limit(electron.x, left + 5, right - 5);
         electron.angle = Math.PI - electron.angle;
       }
       if (hotIons) collideWithMetalIon(electron, hotIons);
     }
-  }
-
-  function advanceThroughWire(electron, dt) {
-    electron.wire += 122 * dt;
-    if (electron.wire < wireLength) return;
-    electron.x = left + 5 + electron.wire - wireLength;
-    electron.y = middle;
-    electron.angle = (random(1) - .5) * 1.3;
-    electron.wire = null;
   }
 
   function collideWithMetalIon(electron, sites) {
@@ -410,48 +456,121 @@
     line([[x - 2.4, y], [x + 2.4, y]], "#203d51", 1.2);
   }
 
-  function wirePosition(electron) {
-    let distance = electron.wire;
-    for (const [index, segment] of wireSegments.entries()) {
-      if (distance <= segment.length) {
-        const progress = distance / segment.length;
-        const entryOffset = index === 0 ? (electron.entryY - middle) * (1 - progress) : 0;
-        return [segment.x + segment.dx * progress, segment.y + segment.dy * progress + entryOffset];
+  function wirePath(points) {
+    const parts = points.slice(1).map(([endX, endY], index) => {
+      const [x, y] = points[index];
+      return { x, y, dx: endX - x, dy: endY - y, length: Math.hypot(endX - x, endY - y) };
+    });
+    return { points, parts, length: parts.reduce((sum, part) => sum + part.length, 0) };
+  }
+
+  function leadPosition(path, fraction) {
+    let distance = fraction * path.length;
+    for (const part of path.parts) {
+      if (distance <= part.length) {
+        const progress = distance / part.length;
+        return [part.x + part.dx * progress, part.y + part.dy * progress];
       }
-      distance -= segment.length;
+      distance -= part.length;
     }
-    return [left + 5, middle];
+    return path.points.at(-1);
+  }
+
+  function circuitPosition(electron) {
+    const { lane, along, across } = electron;
+    const { metalSlots } = lane;
+    const loopSlots = metalSlots + 2 * leadSlots;
+    const phase = (electron.phase + lab.circuitDrift + along * .18 + loopSlots) % loopSlots;
+    const posInMetal = (phase - leadSlots) / metalSlots;
+    if (posInMetal >= 0 && posInMetal < 1) {
+      const room = Math.sin(Math.PI * posInMetal);
+      return [left + posInMetal * (right - left), lane.y + across * (3 + room * 13), true];
+    }
+    const outgoing = phase < leadSlots;
+    const fraction = outgoing ? phase / leadSlots : (phase - leadSlots - metalSlots) / leadSlots;
+    const [x, y] = leadPosition(outgoing ? lane.outgoing : lane.returning, fraction);
+    return [x + across * 2.5 * Math.sin(Math.PI * fraction), y + across * 3, false];
+  }
+
+  function drawBulb() {
+    ctx.save();
+    ctx.translate(bulbX, 83);
+    if (lab.power) {
+      const glow = ctx.createRadialGradient(0, -43, 7, 0, -43, 65);
+      glow.addColorStop(0, "#ffd46ea6");
+      glow.addColorStop(.42, "#ffc65c54");
+      glow.addColorStop(1, "#ffc65c00");
+      circle(0, -43, 65, glow);
+    }
+    const glass = new Path2D();
+    glass.moveTo(-10, -18);
+    glass.bezierCurveTo(-11, -29, -28, -34, -28, -53);
+    glass.bezierCurveTo(-28, -69, -15, -79, 0, -79);
+    glass.bezierCurveTo(15, -79, 28, -69, 28, -53);
+    glass.bezierCurveTo(28, -34, 11, -29, 10, -18);
+    glass.closePath();
+    const glassTint = ctx.createRadialGradient(-7, -48, 1, 0, -44, 41);
+    glassTint.addColorStop(0, lab.power ? "#fff2bd" : "#1c3348d9");
+    glassTint.addColorStop(.58, lab.power ? "#ffce76dd" : "#4e6b7b8a");
+    glassTint.addColorStop(1, lab.power ? "#fd9c3a93" : "#91b4c1a3");
+    ctx.fillStyle = glassTint;
+    ctx.fill(glass);
+    ctx.strokeStyle = lab.power ? "#fff0b8" : "#9ab9c5";
+    ctx.lineWidth = 1.8;
+    ctx.stroke(glass);
+
+    ctx.beginPath();
+    ctx.moveTo(-21, -52);
+    ctx.quadraticCurveTo(-23, -65, -10, -71);
+    ctx.lineCap = "round";
+    ctx.strokeStyle = lab.power ? "#fffae2bb" : "#cce8ec99";
+    ctx.lineWidth = 3.4;
+    ctx.stroke();
+    line([[-5, -20], [-10, -37], [-8, -43], [8, -43], [10, -37], [5, -20]], lab.power ? "#a56736" : "#aec4cb", 1.6);
+    const filament = [[-8, -43], [-6, -48], [-3, -41], [0, -48], [3, -41], [6, -48], [8, -43]];
+    line(filament, lab.power ? "#bd5923" : "#899da8", 3);
+    if (lab.power) line(filament, "#ffffe9", 1.7);
+
+    const metal = ctx.createLinearGradient(-13, 0, 13, 0);
+    metal.addColorStop(0, "#485765");
+    metal.addColorStop(.31, "#c7d3d8");
+    metal.addColorStop(.59, "#9caeb6");
+    metal.addColorStop(1, "#415462");
+    roundedBox(-12, -21, 24, 19, 4, metal, "#9fb1b9");
+    for (let thread = -17; thread < -5; thread += 4) {
+      line([[-11, thread + 2], [11, thread]], "#415462", 1.5);
+    }
+    roundedBox(-8, -3, 16, 5, 2, "#1b252f", "#718392");
+    circle(0, 3, 3, "#c7a874");
+    ctx.restore();
   }
 
   function drawCircuit() {
-    const wireColour = lab.power ? "#6597b4" : "#587184";
-    const lampX = 575;
-    const lampY = 82;
-    if (lab.power) {
-      const glow = ctx.createRadialGradient(lampX, lampY, 8, lampX, lampY, 55);
-      glow.addColorStop(0, "#ffc85e91");
-      glow.addColorStop(1, "#ffc85e00");
-      circle(lampX, lampY, 55, glow);
+    const wireColour = lab.power ? "#64899f" : "#546f80";
+    for (const lane of lanes) {
+      line(lane.outgoing.points, "#101d28", 11);
+      line(lane.returning.points, "#101d28", 11);
     }
-    line(wirePoints, wireColour, 4);
-    circle(lampX, lampY, 19, lab.power ? "#ffe396" : "#213647", lab.power ? "#fff0ba" : "#8fa9bb");
-    const filament = lab.power ? "#925914" : "#9caeba";
-    line([[lampX - 18, lampY], [lampX - 9, lampY], [lampX + 9, lampY], [lampX + 18, lampY]], filament, 2);
-    line([[lampX - 9, lampY + 9], [lampX + 9, lampY - 9]], filament, 2);
-    line([[lampX - 9, lampY - 9], [lampX + 9, lampY + 9]], filament, 2);
-    for (const electron of electrons) {
-      if (electron.wire === null) continue;
-      const [x, y] = wirePosition(electron);
-      drawElectron(x, y, lab.power ? "#a6ebff" : "#87bada");
+    for (const lane of lanes) {
+      line(lane.outgoing.points, wireColour, 7);
+      line(lane.returning.points, wireColour, 7);
     }
-    roundedBox(332, 62, 136, 40, 10, lab.power ? "#20485a" : "#192d3e", "#597487");
-    label("DC SUPPLY", 400, 83, "#d3e4ef", 15, "center");
-    label("−", 346, 82, "#a5dfff", 19, "center");
-    label("+", 454, 82, "#ffd096", 19, "center");
-    label("LAMP", lampX, 48, "#f1cb87", 15, "center");
+    roundedBox(left - 4, top, 8, bottom - top, 3, "#879faa", "#a6c5d4");
+    roundedBox(right - 4, top, 8, bottom - top, 3, "#879faa", "#a6c5d4");
+    drawBulb();
+    for (const electron of circuitElectrons) {
+      const [x, y, inMetal] = circuitPosition(electron);
+      drawElectron(x, y, inMetal ? "#ace2ff" : lab.power ? "#a6ebff" : "#87bada");
+    }
+    roundedBox(303, 34, 194, 79, 12, "#192d3e", lab.power ? "#7bb9a2" : "#6492aa");
+    label("DC SUPPLY", 400, 49, "#d3e4ef", 16, "center");
+    circle(319, wireY, 7, "#153448", "#a5dfff");
+    circle(481, wireY, 7, "#663b35", "#ffd096");
+    label("−", 319, wireY, "#ebf8ff", 12, "center");
+    label("+", 481, wireY, "#ffe0af", 12, "center");
     if (lab.power) {
-      arrow(260, 177, 55, "#86d9ff");
-      arrow(681, 618, 55, "#86d9ff");
+      arrow(260, 177, 61, "#86d9ff");
+      arrow(683, 625, 61, "#86d9ff");
     }
   }
 
@@ -544,7 +663,6 @@
 
   function drawMetalElectrons() {
     for (const electron of electrons) {
-      if (electron.wire !== null) continue;
       const y = electron.y;
       const offset = y < slipPlane ? lab.shift : 0;
       const x = limit(electron.x + layerShift(y), left + offset + 3, right + offset - 3);
@@ -581,8 +699,7 @@
         line([[left + layerShift(y), y], [right + layerShift(y), y]], "#719ab43b", 1.5);
       }
     }
-    const showElectronsOnTop = lab.mode === "electricity" || lab.mode === "heat";
-    if (!showElectronsOnTop) drawMetalElectrons();
+    if (lab.mode === "structure" || lab.mode === "hammer") drawMetalElectrons();
     for (const ion of ions) {
       const { x, y, radius, changed, blocksSlip } = metalIonPosition(ion);
       if (lab.mode === "hammer" && blocksSlip) {
@@ -592,7 +709,7 @@
       drawIon(x, y, radius, changed ? "alloy" : "positive");
       if (ion.bump > 0) drawCollision(x - ion.bumpX * radius, y - ion.bumpY * radius, ion.bump / .32);
     }
-    if (showElectronsOnTop) drawMetalElectrons();
+    if (lab.mode === "heat") drawMetalElectrons();
     ctx.restore();
     ctx.strokeStyle = "#6693b8";
     ctx.lineWidth = 1.6;
